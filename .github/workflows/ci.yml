@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: crm
+          POSTGRES_PASSWORD: crm_ci_only
+          POSTGRES_DB: crm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U crm -d crm"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://crm:crm_ci_only@127.0.0.1:5432/crm?schema=public
+      APP_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      APP_URL: http://127.0.0.1:3100
+      MAIL_MODE: capture
+      PAYMENTS_MODE: test
+      MESSAGING_MODE: capture
+      E2E_INTERNAL_EMAIL: intern@example.com
+      E2E_CUSTOMER_EMAIL: kundin@example.org
+      # No AI server in CI: embedding calls fail fast, the seed marks those sources as failed
+      OLLAMA_BASE_URL: http://127.0.0.1:9
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Migrate
+        run: npx prisma migrate deploy
+
+      - name: Seed demo agency and test data
+        # Same as `npm run db:seed` + `npm run e2e:seed`, but with the CI environment instead of app/.env
+        run: |
+          npx tsx prisma/seed.ts
+          npx tsx scripts/seed-e2e.ts
+
+      - name: Unit and DB tests
+        run: npm test

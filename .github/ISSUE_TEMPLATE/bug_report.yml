@@ -1,0 +1,69 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security issues must not be reported here**; see SECURITY.md.
+        Please remove personal data (names, email addresses, IBANs) from logs and screenshots.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: e.g. v0.9.0 or commit abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Setup
+      options:
+        - Local development (npm run dev)
+        - Docker Compose (deploy/compose)
+        - Kubernetes (deploy/k8s)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Contacts / companies
+        - Pipeline / tasks / tickets
+        - Forms
+        - Email / campaigns
+        - Landing pages / domains
+        - Processes
+        - Invoices / payments / subscriptions
+        - Inbox
+        - Calendar / booking
+        - Analytics
+        - AI / knowledge / MCP
+        - Roles / permissions
+        - Installation / operations
+        - Other
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Relevant JSON log lines from app or worker (without personal data).
+      render: text

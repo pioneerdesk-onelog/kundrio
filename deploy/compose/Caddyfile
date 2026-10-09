@@ -1,0 +1,75 @@
+# Reverse-Proxy mit automatischem HTTPS (Let's Encrypt). Domain aus CRM_DOMAIN, Kontakt aus ACME_EMAIL.
+{
+	email {$ACME_EMAIL}
+	servers {
+		# Nur Caddy setzt X-Forwarded-For (überschreibt Client-Angaben) → App: TRUST_PROXY=1
+		trusted_proxies static private_ranges
+	}
+	# Eigene Kundendomains (Landingpages): Zertifikat erst nach Rückfrage bei der App ausstellen.
+	# Die App antwortet nur für eingetragene Domains im Status „wird geprüft“/„aktiv“ mit 200.
+	on_demand_tls {
+		ask http://app:3000/api/domains/ask?secret={$CADDY_ASK_SECRET}
+	}
+}
+
+{$CRM_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Größenlimit (Mail-Anhänge bis 10 MB als Base64 + Log-Uploads)
+	request_body {
+		max_size 25MB
+	}
+
+	reverse_proxy {
+		# Alle App-Replikate per Docker-DNS, Ausfall eines Replikats wird erkannt
+		dynamic a app 3000 {
+			refresh 10s
+		}
+		lb_policy round_robin
+		health_uri /api/health
+		health_interval 15s
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# Alle übrigen Hostnamen = eigene Kundendomains → Landingpages (Host-Routing in der App, src/middleware.ts).
+# Zertifikate per On-Demand-TLS; unbekannte Hosts bekommen kein Zertifikat (ask → 404).
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	request_body {
+		max_size 1MB
+	}
+	reverse_proxy {
+		dynamic a app 3000 {
+			refresh 10s
+		}
+		lb_policy round_robin
+		health_uri /api/health
+		health_interval 15s
+	}
+	log {
+		output stdout
+		format json
+	}
+}

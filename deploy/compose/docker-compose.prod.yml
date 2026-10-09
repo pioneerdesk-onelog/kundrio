@@ -1,0 +1,146 @@
+# Produktion auf einer VM (z. B. STACKIT Compute): Caddy (HTTPS) → App (2 Replikate) + Worker + Backup.
+# Datenbank: extern (STACKIT PostgreSQL Flex, empfohlen) über DATABASE_URL – oder lokal mit Profil "local-db".
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod --profile local-db up -d --build
+name: kundrio-prod
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: ${DATABASE_URL}
+  APP_URL: https://${CRM_DOMAIN}
+  APP_SECRET: ${APP_SECRET}
+  MAIL_EVENTS_SECRET: ${MAIL_EVENTS_SECRET}
+  TRUST_PROXY: "1"
+  RATE_LIMIT_STORE: db
+  MAIL_MODE: ${MAIL_MODE:-capture}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_SECURE: ${SMTP_SECURE:-false}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+  OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-qwen3-embedding:0.6b}
+  OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-qwen3.6:35b-a3b}
+  EMBED_DIM: ${EMBED_DIM:-1024}
+  YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  # Eigene Kundendomains (Landingpages)
+  CADDY_ASK_SECRET: ${CADDY_ASK_SECRET:-}
+  LANDING_CNAME_TARGET: ${LANDING_CNAME_TARGET:-}
+  LANDING_IPV4: ${LANDING_IPV4:-}
+  LANDING_IPV6: ${LANDING_IPV6:-}
+  APP_HOSTS: ${APP_HOSTS:-}
+
+x-image: &image
+  image: ${CRM_IMAGE:-kundrio:latest}
+  build:
+    context: ../../app
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CRM_DOMAIN: ${CRM_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+      # On-Demand-TLS für Kundendomains (ask-Endpunkt der App)
+      CADDY_ASK_SECRET: ${CADDY_ASK_SECRET:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Einmalig vor jedem Start/Update: Datenbank-Migrationen
+  migrate:
+    <<: *image
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+
+  app:
+    <<: *image
+    restart: unless-stopped
+    init: true
+    environment: *app-env
+    deploy:
+      replicas: ${APP_REPLICAS:-2}
+    expose:
+      - "3000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/standalone/.next/cache
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *image
+    restart: unless-stopped
+    init: true
+    command: ["node", "--conditions=react-server", "--import", "tsx", "scripts/worker.ts"]
+    environment: *app-env
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  backup:
+    build:
+      context: ../backup
+    image: ${BACKUP_IMAGE:-kundrio-backup:latest}
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/schedule.sh"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-2}
+    security_opt:
+      - no-new-privileges:true
+
+  # Optional: lokale Datenbank auf der VM (nur ohne Managed-DB). pgvector inklusive.
+  db:
+    profiles: ["local-db"]
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-}
+      POSTGRES_DB: crm
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:

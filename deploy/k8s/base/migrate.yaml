@@ -1,0 +1,39 @@
+# Migrations-Vorlage: ausgesetzter CronJob, aus dem vor jedem Rollout ein Job erzeugt wird:
+#   kubectl -n kundrio create job migrate-$(date +%s) --from=cronjob/kundrio-migrate
+#   kubectl -n kundrio wait --for=condition=complete --timeout=300s job/migrate-…
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kundrio-migrate
+spec:
+  suspend: true
+  schedule: "0 0 31 2 *"
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: migrate
+              image: kundrio
+              command: ["npx", "prisma", "migrate", "deploy"]
+              env:
+                - name: DATABASE_URL
+                  valueFrom: { secretKeyRef: { name: kundrio-secrets, key: DATABASE_URL } }
+                - name: HOME
+                  value: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              volumeMounts:
+                - { name: tmp, mountPath: /tmp }
+          volumes:
+            - { name: tmp, emptyDir: {} }

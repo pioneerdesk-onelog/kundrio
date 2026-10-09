@@ -1,0 +1,24 @@
+# Voraussetzung: ingress-nginx + cert-manager mit ClusterIssuer "letsencrypt" (siehe README).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kundrio
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: 25m
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [crm.example.de]
+      secretName: kundrio-tls
+  rules:
+    - host: crm.example.de
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: kundrio-app, port: { name: http } }

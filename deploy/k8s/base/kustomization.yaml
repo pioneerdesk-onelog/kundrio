@@ -1,0 +1,28 @@
+# Kustomize-Basis für STACKIT SKE (oder jedes Kubernetes ≥ 1.29).
+#   kubectl kustomize deploy/k8s/base | kubectl apply -f -
+# Geheimnisse NICHT hier ablegen: Secret "kundrio-secrets" separat anlegen (siehe README / secret.example.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kundrio
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: kundrio
+    includeSelectors: false
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - app.yaml
+  - worker.yaml
+  - migrate.yaml
+  - backup.yaml
+  - ingress.yaml
+  - networkpolicy.yaml
+images:
+  # Im Overlay/CI auf die echte Registry + Tag setzen:
+  #   kustomize edit set image kundrio=<registry>/kundrio:<tag>
+  - name: kundrio
+    newName: registry.example.invalid/kundrio
+    newTag: latest
+  - name: kundrio-backup
+    newName: registry.example.invalid/kundrio-backup
+    newTag: latest

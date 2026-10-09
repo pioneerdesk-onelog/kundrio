@@ -1,0 +1,16 @@
+[Unit]
+Description=Kundrio (Compose-Stack, Secrets aus STACKIT Secrets Manager)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/kundrio/src/deploy/stackit
+ExecStart=/opt/kundrio/src/deploy/stackit/start.sh
+ExecStop=/usr/bin/docker compose -f docker-compose.yml --env-file /run/kundrio/compose.env stop
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

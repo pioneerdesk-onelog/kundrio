@@ -1,0 +1,2 @@
+# /etc/cron.d/kundrio-demo-reset – Demo jede Nacht 03:30 UTC neu aufbauen
+30 3 * * * root /opt/kundrio/src/deploy/stackit/demo-reset.sh >> /var/log/kundrio-demo-reset.log 2>&1

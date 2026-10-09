@@ -1,0 +1,46 @@
+# Lokale Infrastruktur für das CRM. Alle Ports nur an 127.0.0.1 gebunden.
+name: kundrio
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm_local_only}
+      POSTGRES_DB: crm
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Fängt alle ausgehenden E-Mails lokal ab (nichts verlässt den Rechner).
+  # Web-Oberfläche: http://127.0.0.1:58025
+  mail:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:51025:1025"
+      - "127.0.0.1:58025:8025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+
+  # Eigene Metasuchmaschine für Recherche/Anreicherung (JSON-API), nur lokal: http://127.0.0.1:58080
+  search:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:58080:8080"
+    volumes:
+      - ./infra/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_BASE_URL: "http://127.0.0.1:58080/"
+
+volumes:
+  pgdata:
+    # fester Name: bestehende Daten aus dem früheren Projekt „pd-crm“ weiterverwenden
+    name: pd-crm_pgdata

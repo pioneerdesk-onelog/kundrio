@@ -1,0 +1,37 @@
+# Tägliches, verschlüsseltes Datenbank-Backup in STACKIT Object Storage (zusätzlich zu PostgreSQL-Flex-Backups).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kundrio-backup
+spec:
+  schedule: "0 2 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: backup
+              image: kundrio-backup
+              env:
+                - { name: HOME, value: /tmp }
+              envFrom:
+                - secretRef: { name: kundrio-backup-secrets }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }
+              volumeMounts:
+                - { name: tmp, mountPath: /tmp }
+          volumes:
+            - { name: tmp, emptyDir: {} }

@@ -1,0 +1,119 @@
+# Kundrio auf STACKIT (VM): Website kundrio.de, SaaS app.kundrio.de, Demo demo.kundrio.de, Kundendomains on demand.
+{
+	email {$ACME_EMAIL}
+	servers {
+		trusted_proxies static private_ranges
+	}
+	on_demand_tls {
+		ask http://app:3000/api/domains/ask?secret={$CADDY_ASK_SECRET}
+	}
+}
+
+(app_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+app.kundrio.de {
+	encode zstd gzip
+	import app_headers
+	request_body {
+		max_size 25MB
+	}
+	reverse_proxy {
+		dynamic a app 3000 {
+			refresh 10s
+		}
+		lb_policy round_robin
+		health_uri /api/health
+		health_interval 15s
+	}
+}
+
+demo.kundrio.de {
+	encode zstd gzip
+	import app_headers
+	header X-Robots-Tag "noindex, nofollow"
+	request_body {
+		max_size 5MB
+	}
+	reverse_proxy demo-app:3000
+}
+
+www.kundrio.de {
+	redir https://kundrio.de{uri} permanent
+}
+
+kundrio.de {
+	root * /srv/site
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		Content-Security-Policy "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+		-Server
+	}
+
+	# Schriften und Bilder lange cachen, HTML kurz (Änderungen sollen schnell sichtbar sein)
+	@assets path /assets/* /favicon.svg /favicon-32.png /apple-touch-icon.png
+	header @assets Cache-Control "public, max-age=604800"
+	@html path *.html */
+	header @html Cache-Control "public, max-age=300"
+
+	# Schriften werden per <link rel="preload" crossorigin> geladen
+	@fonts path /assets/fonts/*.woff2
+	header @fonts Access-Control-Allow-Origin "https://kundrio.de"
+
+	request_body {
+		max_size 16KB
+	}
+
+	file_server {
+		hide .*
+	}
+
+	handle_errors {
+		@404 expression {err.status_code} == 404
+		rewrite @404 /404.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# Alle übrigen Hostnamen = eigene Kundendomains → Landingpages der Produktion (On-Demand-TLS, ask → App)
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	import app_headers
+	request_body {
+		max_size 1MB
+	}
+	reverse_proxy {
+		dynamic a app 3000 {
+			refresh 10s
+		}
+		lb_policy round_robin
+		health_uri /api/health
+		health_interval 15s
+	}
+}

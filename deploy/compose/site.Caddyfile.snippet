@@ -1,0 +1,57 @@
+# Öffentliche Website kundrio.de (statisch, Ordner site/ im Repo).
+# In den Caddyfile VOR dem Block „https://“ (On-Demand-TLS für Kundendomains) einfügen und
+# den Ordner in den Caddy-Container mounten, z. B. im Service „caddy“:
+#   volumes:
+#     - ../../site:/srv/site:ro
+#
+# Die Website lädt nichts von Dritten, setzt keine Cookies und hat weder Inline-Skripte noch Inline-Styles,
+# daher kommt die CSP ohne 'unsafe-inline' aus.
+
+www.kundrio.de {
+	redir https://kundrio.de{uri} permanent
+}
+
+kundrio.de {
+	root * /srv/site
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		Content-Security-Policy "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self' data:; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+		-Server
+	}
+
+	# Schriften und Bilder lange cachen, HTML kurz (Änderungen sollen schnell sichtbar sein)
+	@assets path /assets/* /favicon.svg /favicon-32.png /apple-touch-icon.png
+	header @assets Cache-Control "public, max-age=604800"
+	@html path *.html */
+	header @html Cache-Control "public, max-age=300"
+
+	# Schriften werden per <link rel="preload" crossorigin> geladen
+	@fonts path /assets/fonts/*.woff2
+	header @fonts Access-Control-Allow-Origin "https://kundrio.de"
+
+	request_body {
+		max_size 16KB
+	}
+
+	file_server {
+		hide .*
+	}
+
+	handle_errors {
+		@404 expression {err.status_code} == 404
+		rewrite @404 /404.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

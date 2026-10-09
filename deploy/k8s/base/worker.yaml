@@ -1,0 +1,42 @@
+# Hintergrund-Worker (Jobs, Prozess-Engine, Ereignis-Verteiler). Mehrere Replikate sind sicher
+# (Jobs/Ereignisse werden per FOR UPDATE SKIP LOCKED verteilt); 1 genügt für den Start.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kundrio-worker
+  labels: { app.kubernetes.io/name: kundrio-worker }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: kundrio-worker }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: kundrio-worker }
+    spec:
+      automountServiceAccountToken: false
+      # Worker beendet sich nach SIGTERM spätestens nach 25 s
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: worker
+          image: kundrio
+          # direkt node (nicht npm), damit SIGTERM ankommt
+          command: ["node", "--conditions=react-server", "--import", "tsx", "scripts/worker.ts"]
+          envFrom:
+            - configMapRef: { name: kundrio-config }
+            - secretRef: { name: kundrio-secrets }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 768Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }

@@ -1,0 +1,25 @@
+# App nur vom Ingress-Controller erreichbar; Worker/Jobs ohne eingehenden Verkehr.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kundrio-app-ingress
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: kundrio-app }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+      ports: [{ port: 3000 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kundrio-deny-ingress-others
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/name, operator: NotIn, values: [kundrio-app] }
+  policyTypes: [Ingress]
+  ingress: []

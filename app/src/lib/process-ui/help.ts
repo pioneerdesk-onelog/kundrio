@@ -1,0 +1,56 @@
+// Erklärtexte für Nicht-Techniker („Was passiert hier?“) und der Feldkatalog für Bedingungen.
+import type { NodeType, TriggerType } from "@/lib/process/definition";
+
+export const NODE_HELP: Record<NodeType, string> = {
+  "action.set_property": "Schreibt einen Wert in ein Feld des Datensatzes, z. B. „Quelle = Messe“.",
+  "action.set_lifecycle": "Setzt die Lifecycle-Phase (z. B. Lead → MQL). Mit „nur vorwärts“ wird niemand versehentlich zurückgestuft.",
+  "action.add_tag": "Hängt einen Tag an den Kontakt. Tags eignen sich für schnelle Filter und Kampagnen.",
+  "action.remove_tag": "Entfernt einen Tag vom Kontakt.",
+  "action.add_to_list": "Nimmt den Kontakt in eine statische Liste auf, z. B. für einen Newsletter-Verteiler.",
+  "action.remove_from_list": "Nimmt den Kontakt aus einer Liste heraus.",
+  "action.associate_company": "Ordnet den Kontakt anhand seiner E-Mail-Domain einem Unternehmen zu und legt es bei Bedarf an.",
+  "action.assign_owner": "Bestimmt, wer im Team zuständig ist – reihum, fest oder wie beim Unternehmen.",
+  "action.create_task": "Legt eine Aufgabe an, damit sich ein Mensch kümmert (z. B. „Lead anrufen“).",
+  "action.create_deal": "Legt einen Deal in der Pipeline an und verknüpft ihn mit dem Kontakt.",
+  "action.create_ticket": "Legt ein Service-Ticket an, optional mit Reaktionszeit (SLA).",
+  "action.set_stage": "Verschiebt einen Deal oder ein Ticket in eine andere Phase.",
+  "action.notify_internal": "Schickt eine interne Nachricht an die zuständige Person oder die Admins. Kunden sehen das nicht.",
+  "action.send_email": "Sendet eine E-Mail an den Kontakt. Hat Außenwirkung: Der Prozess braucht vor dem Start eine Freigabe. Marketing-Mails gehen nur an Kontakte mit Einwilligung.",
+  "action.send_channel_message": "Sendet eine WhatsApp- oder SMS-Nachricht an die Mobilnummer des Kontakts. Hat Außenwirkung: Der Prozess braucht vor dem Start eine Freigabe. Werbung nur mit Einwilligung; WhatsApp außerhalb von 24 Stunden nach der letzten Kunden-Nachricht nur mit einer bei Meta freigegebenen Vorlage. Im Testmodus wird nichts versendet.",
+  "action.create_order_confirmation": "Erstellt aus dem angenommenen Angebot eine Auftragsbestätigung (AB) – Positionen, Kunde und Leistungszeitraum werden übernommen. Gibt es schon eine AB, wird sie weiterverwendet.",
+  "action.create_invoice_from_order": "Erstellt aus der Auftragsbestätigung eines früheren Schritts (oder des Ereignisses) eine Rechnung als Entwurf.",
+  "action.send_document": "Sendet einen Beleg (AB, Rechnung) mit PDF per E-Mail – mit Ihren Texten und Platzhaltern. Hat Außenwirkung: Der Prozess braucht vor dem Start eine Freigabe.",
+  "action.schedule_meeting": "Schlägt einen Termin aus einer Terminvorlage vor (nächster freier Platz der zuständigen Person). Ein Mensch bestätigt im Freigabe-Eingang – erst dann geht die Einladung mit Video-Link raus.",
+  "action.webhook": "Meldet das Ereignis an ein anderes System (z. B. OneLog). Hat Außenwirkung und braucht eine Freigabe.",
+  "ai.classify": "Die KI liest die gewählten Felder und ordnet den Datensatz einer Kategorie zu (z. B. Branche, Anliegen). Ist sie sich unsicher, entsteht eine Prüfaufgabe statt eines falschen Werts.",
+  "ai.extract": "Die KI liest Freitext (z. B. Formular-Nachricht) und füllt daraus Felder wie Budget oder Teamgröße.",
+  "ai.score": "Berechnet eine Lead-Bewertung aus nachvollziehbaren Regeln (Punkte je Merkmal), optional ergänzt um eine KI-Einschätzung.",
+  "logic.if": "Teilt den Ablauf: Trifft die Bedingung zu, geht es im Ja-Zweig weiter, sonst im Nein-Zweig.",
+  "logic.wait": "Pausiert den Ablauf für eine feste Zeit, z. B. 2 Tage vor der Nachfass-Aufgabe.",
+  "logic.wait_until": "Wartet, bis eine Bedingung erfüllt ist (z. B. Deal gewonnen) – höchstens bis zur eingestellten Frist.",
+  "logic.end": "Hier endet der Ablauf für diesen Datensatz.",
+};
+
+export const TRIGGER_HELP: Partial<Record<TriggerType, string>> = {
+  "quote.accepted": "Startet, wenn ein Angebot angenommen wurde – im CRM oder online durch den Kunden. Eingeschrieben wird der Kontakt des Angebots.",
+  "order.created": "Startet, sobald eine Auftragsbestätigung erstellt wurde. Eingeschrieben wird der Kontakt des Belegs.",
+  "invoice.sent": "Startet, wenn ein Beleg per E-Mail versendet wurde. Optional nur für eine Belegart.",
+  "meeting.scheduled": "Startet, wenn ein Termin mit dem Kontakt geplant wurde. Optional nur für eine Terminvorlage.",
+  "meeting.booked": "Startet, wenn ein Kontakt selbst einen Termin über eine Buchungsseite gebucht hat. Optional nur für eine Terminvorlage.",
+  "conversation.message_received": "Startet, wenn im gemeinsamen Posteingang eine Nachricht eines Kontakts eingeht (E-Mail, WhatsApp, SMS). Standardmäßig nur beim ersten Eingang eines neuen Gesprächs.",
+  "subscription.created": "Startet, wenn für den Kontakt ein Abo angelegt wurde.",
+  "subscription.cancelled": "Startet, wenn ein Abo gekündigt wurde – im CRM oder vom Kunden im Portal.",
+  "invoice.overdue": "Startet, wenn eine Rechnung des Kontakts überfällig wird (Fälligkeitsdatum überschritten, nicht bezahlt).",
+  "invoice.paid": "Startet, wenn eine Rechnung des Kontakts vollständig bezahlt ist – online, per Überweisung (Kontoabgleich), SEPA-Lastschrift, manuell oder aus Lexware. Optional nur für einen Zahlweg.",
+  "debit.returned": "Startet bei einer Rücklastschrift (die Bank hat den Einzug zurückgegeben). Optional nur für einen Rückgabegrund.",
+  "form.submitted": "Startet, sobald jemand ein Formular absendet. Optional nur für ein bestimmtes Formular.",
+  "contact.created": "Startet für jeden neu angelegten Kontakt – egal ob per Formular, Import oder API.",
+  "contact.tag_added": "Startet, wenn ein bestimmter Tag gesetzt wird.",
+  "contact.lifecycle_changed": "Startet, wenn sich die Lifecycle-Phase ändert, z. B. auf „Kunde“.",
+  "deal.stage_changed": "Startet, wenn ein Deal in eine Phase wechselt, z. B. „Gewonnen“.",
+  "ticket.created": "Startet für jedes neue Ticket.",
+  "schedule.daily": "Prüft einmal täglich alle passenden Datensätze, z. B. Deals ohne Aktivität seit 14 Tagen.",
+  manual: "Startet nur, wenn jemand einen Datensatz von Hand oder per MCP einschreibt.",
+};
+
+// Felder für Bedingungen und Aktionen: siehe src/lib/process/fields.ts (einzige Quelle).

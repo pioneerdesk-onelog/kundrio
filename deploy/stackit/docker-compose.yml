@@ -1,0 +1,144 @@
+# Kundrio auf einer STACKIT-VM. Geheimnisse liefert fetch-secrets.sh aus dem Secrets Manager nach /run/kundrio
+# (tmpfs); nicht geheime Werte stehen in app.config.env / demo.config.env. Start über systemd (kundrio.service).
+#   docker compose -f deploy/stackit/docker-compose.yml up -d --build
+name: kundrio
+
+x-image: &image
+  image: kundrio:${KUNDRIO_TAG:-latest}
+  build:
+    context: ../../app
+
+x-hardening: &hardening
+  read_only: true
+  init: true
+  security_opt:
+    - no-new-privileges:true
+
+x-prod-env: &prod-env
+  env_file:
+    - app.config.env
+    - /run/kundrio/app.env
+
+x-demo-env: &demo-env
+  env_file:
+    - demo.config.env
+    - /run/kundrio/demo.env
+  environment:
+    DATABASE_URL: postgresql://demo:${DEMO_DB_PASSWORD:?}@demo-db:5432/demo
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?}
+      CADDY_ASK_SECRET: ${CADDY_ASK_SECRET:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../site:/srv/site:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # --- Produktion (app.kundrio.de) ---
+  migrate:
+    <<: [*image, *prod-env]
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"
+
+  app:
+    <<: [*image, *prod-env, *hardening]
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+    expose:
+      - "3000"
+    tmpfs:
+      - /tmp
+      - /app/standalone/.next/cache
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: [*image, *prod-env, *hardening]
+    restart: unless-stopped
+    command: ["node", "--conditions=react-server", "--import", "tsx", "scripts/worker.ts"]
+    stop_grace_period: 30s
+    tmpfs:
+      - /tmp
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  backup:
+    build:
+      context: ../backup
+    image: kundrio-backup:${KUNDRIO_TAG:-latest}
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/schedule.sh"]
+    env_file:
+      - /run/kundrio/backup.env
+    environment:
+      S3_ENDPOINT: https://object.storage.eu01.onstackit.cloud
+      S3_BUCKET: kundrio-backups
+      S3_REGION: eu01
+      BACKUP_HOUR_UTC: "2"
+    security_opt:
+      - no-new-privileges:true
+
+  # --- Öffentliche Demo (demo.kundrio.de), getrennte Datenbank, nächtlich neu (demo-reset.sh) ---
+  demo-db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:?}
+      POSTGRES_DB: demo
+    volumes:
+      - demo_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  demo-app:
+    <<: [*image, *demo-env, *hardening]
+    restart: unless-stopped
+    expose:
+      - "3000"
+    tmpfs:
+      - /tmp
+      - /app/standalone/.next/cache
+    volumes:
+      - demo_files:/data/files
+    depends_on:
+      demo-db:
+        condition: service_healthy
+
+  demo-worker:
+    <<: [*image, *demo-env, *hardening]
+    restart: unless-stopped
+    command: ["node", "--conditions=react-server", "--import", "tsx", "scripts/worker.ts"]
+    stop_grace_period: 30s
+    tmpfs:
+      - /tmp
+    volumes:
+      - demo_files:/data/files
+    healthcheck:
+      disable: true
+    depends_on:
+      demo-db:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:
+  demo_pg:
+  demo_files:

@@ -1,0 +1,18 @@
+# Nicht geheime Einstellungen. Geheimes (DATABASE_URL, APP_SECRET, …) im Secret kundrio-secrets.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kundrio-config
+data:
+  NODE_ENV: production
+  APP_URL: https://crm.example.de
+  # Ingress-Controller setzt X-Forwarded-For (bei LoadBalancer mit externalTrafficPolicy: Local bzw. PROXY-Protokoll)
+  TRUST_PROXY: "1"
+  RATE_LIMIT_STORE: db
+  MAIL_MODE: capture
+  SMTP_PORT: "587"
+  SMTP_SECURE: "false"
+  EMBED_DIM: "1024"
+  OLLAMA_EMBED_MODEL: qwen3-embedding:0.6b
+  OLLAMA_CHAT_MODEL: qwen3.6:35b-a3b
+  LOG_LEVEL: info

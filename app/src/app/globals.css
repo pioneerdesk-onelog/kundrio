@@ -1,0 +1,75 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Pioneerdesk-Marken-Tokens (BRAND.md V1). Schriften lokal, keine Google-Anfragen. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Newsreader Variable", "Iowan Old Style", Baskerville, Georgia, serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
+
+  --color-accent-50: #e6eef1;
+  --color-accent-100: #c0d3da;
+  --color-accent-300: #5e8896;
+  --color-accent-500: #0b4f6c;
+  --color-accent-600: #08405a;
+  --color-accent-700: #063043;
+  --color-accent-900: #031820;
+
+  --color-ink-50: #f7f8f9;
+  --color-ink-100: #e9ecef;
+  --color-ink-200: #ced4da;
+  --color-ink-400: #5f6b78; /* dunkler als BRAND.md (#7A8591), damit Sekundärtext AA-Kontrast erreicht */
+  --color-ink-600: #3f4853;
+  --color-ink-800: #1f2a37;
+  --color-ink-900: #0e141b;
+
+  --color-sand-50: #fbfaf7;
+  --color-sand-100: #f4f2ec;
+  --color-sand-200: #e8e4d9;
+}
+
+
+:root {
+  --background: var(--color-sand-50);
+  --foreground: var(--color-ink-800);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1117;
+    --foreground: #e6e9ec;
+    /* Sekundärtext und Warnrot ohne eigene dark:-Variante bleiben auf dunklem Grund lesbar (WCAG AA ≥ 4,5:1) */
+    --color-ink-400: #9aa5b1;
+    --color-red-600: #f87171;
+  }
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.015em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
