@@ -4,7 +4,7 @@
 
 **Please do not report security vulnerabilities through public GitHub issues, discussions or pull requests.**
 
-Send your report to **security@kundrio.de**, or use GitHub's private vulnerability reporting ("Report a vulnerability" on the Security tab of this repository).
+Send your report to **info@kundrio.de**, or use GitHub's private vulnerability reporting ("Report a vulnerability" on the Security tab of this repository).
 
 Please include:
 
@@ -42,7 +42,7 @@ In scope: the code in this repository, including the deployment files in `deploy
 
 **Bitte Sicherheitslücken nicht in öffentlichen Issues, Diskussionen oder Pull Requests melden.**
 
-Schicke deinen Bericht an **security@kundrio.de** oder nutze die private Meldung von GitHub („Report a vulnerability“ im Reiter *Security*).
+Schicke deinen Bericht an **info@kundrio.de** oder nutze die private Meldung von GitHub („Report a vulnerability“ im Reiter *Security*).
 
 Bitte gib an:
 
