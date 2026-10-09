@@ -1,4 +1,4 @@
-// Datenmodell des Pioneerdesk-CRM (GHL-Clone).
+// Datenmodell von Kundrio.
 // Grundregel: Jede fachliche Tabelle hängt an einem Workspace (= ein Online-Projekt).
 // Abfragen IMMER mit workspaceId filtern (Mandantentrennung).
 

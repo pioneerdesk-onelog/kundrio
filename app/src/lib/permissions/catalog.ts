@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Berechtigungskatalog (Client und Server). Modell: HubSpot+GHL-Hybrid (Entscheidung 07.10.2026).
+// Berechtigungskatalog (Client und Server). Modell: Hybrid aus HubSpot-Reichweiten und Agentur-/Sub-Account-Rollen (Entscheidung 07.10.2026).
 // Je Objekt: lesen / bearbeiten / löschen mit Reichweite none | own | team | all.
 // Sonderrechte sind bewusst getrennt (z. B. Export ≠ Lesen, Schutz vor Datenabfluss).
 

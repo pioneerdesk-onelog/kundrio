@@ -4,9 +4,9 @@
 
 [Deutsch](README.de.md) · [Documentation (EN)](docs/en/README.md) · [Dokumentation (DE)](docs/de/README.md)
 
-Kundrio is a CRM and marketing platform for agencies. It follows the agency/sub-account model you may know from GoHighLevel: one agency manages any number of sub-accounts (clients or projects), each with its own contacts, pipeline, emails, landing pages, automations and invoices. Unlike most tools in this space, Kundrio runs on European infrastructure, with no US cloud services required. AI runs locally (Ollama) or on an EU provider, and every piece of data can be exported again.
+Kundrio is a CRM and marketing platform for agencies. It follows an agency/sub-account model: one agency manages any number of sub-accounts (clients or projects), each with its own contacts, pipeline, emails, landing pages, automations and invoices. Unlike most tools in this space, Kundrio runs on European infrastructure, with no US cloud services required. AI runs locally (Ollama) or on an EU provider, and every piece of data can be exported again.
 
-> **Status:** feature freeze ahead of the first hosted release. The interface is currently German only.
+> **Status:** running in production as a hosted service at [kundrio.de](https://kundrio.de) (live demo: [demo.kundrio.de](https://demo.kundrio.de), user `guest`, password `lassmichrein`). The interface is currently German only.
 
 ## Features
 
