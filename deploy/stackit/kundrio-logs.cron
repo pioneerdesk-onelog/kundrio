@@ -1,0 +1,2 @@
+# /etc/cron.d/kundrio-logs – Container-Logs (Caddy, App) jeden Montag 04:00 UTC leeren → höchstens 7 Tage Aufbewahrung
+0 4 * * 1 root for c in $(docker ps -q); do f=$(docker inspect -f '{{.LogPath}}' $c); truncate -s 0 "$f"; rm -f "$f".[0-9]*; done

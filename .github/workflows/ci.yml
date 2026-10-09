@@ -34,12 +34,19 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 20
+      # Captures mail locally (booking confirmations etc.); nothing leaves the runner
+      mailpit:
+        image: axllent/mailpit
+        ports:
+          - 51025:1025
 
     env:
       DATABASE_URL: postgresql://crm:crm_ci_only@127.0.0.1:5432/crm?schema=public
       APP_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
       APP_URL: http://127.0.0.1:3100
       MAIL_MODE: capture
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: "51025"
       PAYMENTS_MODE: test
       MESSAGING_MODE: capture
       E2E_INTERNAL_EMAIL: intern@example.com

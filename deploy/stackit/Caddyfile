@@ -9,6 +9,25 @@
 	}
 }
 
+(access_log) {
+	# Zugriffs-Logs ohne volle IP (IPv4 /24, IPv6 /48); Löschung spätestens nach 7 Tagen: kundrio-logs.cron
+	log {
+		output stdout
+		format filter {
+			wrap json
+			request>remote_ip ip_mask {
+				ipv4 24
+				ipv6 48
+			}
+			request>client_ip ip_mask {
+				ipv4 24
+				ipv6 48
+			}
+			request>headers>X-Forwarded-For delete
+		}
+	}
+}
+
 (app_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -17,10 +36,7 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		-Server
 	}
-	log {
-		output stdout
-		format json
-	}
+	import access_log
 }
 
 app.kundrio.de {
@@ -92,10 +108,7 @@ kundrio.de {
 		file_server
 	}
 
-	log {
-		output stdout
-		format json
-	}
+	import access_log
 }
 
 # Alle übrigen Hostnamen = eigene Kundendomains → Landingpages der Produktion (On-Demand-TLS, ask → App)
